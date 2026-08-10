@@ -268,13 +268,32 @@ def main() -> int:
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    OUT.write_text(payload, encoding="utf-8")
-    # file:// 로 열어도 동작하도록 JS 형태로도 함께 출력 (index.html 이 이걸 읽습니다)
-    (OUT.parent / "data.js").write_text("window.SURGERY_DATA=" + payload + ";", encoding="utf-8")
+
+    # 집계 내용이 그대로면 파일을 다시 쓰지 않는다.
+    # (생성시각·원본수정시각만 바뀌어 빈 커밋이 쌓이는 것을 막기 위함)
+    def substantive(obj):
+        m = {k: v for k, v in obj["meta"].items() if k not in ("generated", "source_mtime")}
+        return {"meta": m, "fields": obj["fields"], "dims": obj["dims"], "cases": obj["cases"]}
+
+    unchanged = False
+    if OUT.exists():
+        try:
+            old = json.loads(OUT.read_text(encoding="utf-8"))
+            unchanged = substantive(old) == substantive(data)
+        except (json.JSONDecodeError, KeyError):
+            unchanged = False
+
+    if unchanged:
+        print("[ok] 집계 결과 동일 — 파일 갱신 생략")
+    else:
+        payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        OUT.write_text(payload, encoding="utf-8")
+        # file:// 로 열어도 동작하도록 JS 형태로도 함께 출력 (index.html 이 이걸 읽습니다)
+        (OUT.parent / "data.js").write_text("window.SURGERY_DATA=" + payload + ";", encoding="utf-8")
 
     # ---------------- 리포트 ----------------
-    print(f"[ok] {OUT.relative_to(ROOT)} 생성 — {len(cases)}건, {OUT.stat().st_size / 1024:.0f} KB")
+    print(f"[ok] {OUT.relative_to(ROOT)} {'확인' if unchanged else '생성'} — "
+          f"{len(cases)}건, {OUT.stat().st_size / 1024:.0f} KB")
     print(f"     기간 {data['meta']['date_min']} ~ {data['meta']['date_max']} · "
           f"동맥류 {an_total}건 (clip {clip} / coil {coil})")
     if bad_date:

@@ -35,6 +35,7 @@ if [ -z "$(git status --porcelain docs)" ]; then
 fi
 
 N=$(printf '%s' "$OUT" | sed -n 's/.*docs\/data.json 생성 — \([0-9,]*\)건.*/\1/p')
+N=${N:-$(printf '%s' "$OUT" | sed -n 's/.*docs\/data.json 확인 — \([0-9,]*\)건.*/\1/p')}
 git add docs
 git commit -q -m "데이터 갱신: ${N:-?}건 ($(date '+%Y-%m-%d %H:%M'))" || { log "ERROR: 커밋 실패"; exit 1; }
 

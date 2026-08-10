@@ -2,3 +2,5 @@
 update.log
 __pycache__/
 .DS_Store
+launchd.out.log
+launchd.err.log
