@@ -1,0 +1,357 @@
+# ============================================================
+#  분류 매핑표  —  이 파일만 수정하면 대시보드 분류가 바뀝니다.
+#  원본 엑셀은 절대 수정하지 않습니다.
+#
+#  매칭 규칙: 대소문자·앞뒤공백 무시하고 정확히 일치하는 값을 찾습니다.
+#  매핑에 없는 새 값이 들어오면 "미분류"로 잡히고 build 로그에 경고가 남습니다.
+# ============================================================
+
+# 원본 엑셀 파일 경로 (절대경로)
+source_file: "/Users/jaihochoi/Library/Mobile Documents/com~apple~CloudDocs/최재호수술통계/수술통계(최) 2017~_DB보충_20260810.xlsx"
+source_sheet: "최재호 수술"
+
+# 실제로 수술이 없었던 기간 (대시보드에 회색 음영 + 주석 표시)
+gap_periods:
+  - from: "2024-07"
+    to:   "2025-08"
+    label: "수술 미시행 기간"
+
+# ------------------------------------------------------------
+# 0. 동맥류 치료 건수 정의  (2026-08-10 확정: 809건 기준)
+#    Dx 가 UIA 또는 SAH 이면서, 아래 조건 중 하나를 만족하는 행만 '동맥류 치료'로 집계
+#      - Op name 이 0(clip) 또는 1(coil)                      -> 804건
+#      - Op name 이 'angio only' (시도했으나 조영술만 하고 종료) ->   5건
+#    * 'failure of procedure' 3건은 제외 (포함하려면 아래 include_failure 를 true 로)
+#    * 주의: Op name=1(coil) 675건 중 74건은 DAVF/CCF/AVF/종양 이므로
+#            반드시 Dx 와 교차 확인해야 함 (아래 aneurysm_dx 로 처리)
+# ------------------------------------------------------------
+aneurysm:
+  aneurysm_dx: [UIA, SAH]
+  include_angio_only: true      # +5건  => 809
+  include_failure: false        # +3건  => 812
+
+# ------------------------------------------------------------
+# 0-b. 시술자 처리
+#    시술자에 C 가 없는 45건(OSW/LJK/CWC/CDY/LHJ/HGH, 2018~2023년)도
+#    전부 C 로 간주하여 포함 (2026-08-10 확정). 시술자는 분석 축으로 쓰지 않음.
+# ------------------------------------------------------------
+operator:
+  force_all_to: C
+
+# ------------------------------------------------------------
+# 1. 대분류 (엑셀 'category ' 컬럼) 정규화
+# ------------------------------------------------------------
+category:
+  Vascular: 혈관
+  Vsacular: 혈관
+  Trauma: 외상
+  Tumor: 종양
+  Others: 기타
+
+# ------------------------------------------------------------
+# 2. 임상양상 (엑셀 'category2 ' 컬럼) 정규화
+# ------------------------------------------------------------
+presentation:
+  Incidental: 우연발견
+  incidental: 우연발견
+  Hemorrhage: 출혈
+  hemorrhage: 출혈
+  Ischemia: 허혈
+  ischemia: 허혈
+  AIS: 급성허혈뇌졸중
+  Symptomatic: 증상성
+  symptomatic: 증상성
+  "prev. SAH": 기왕 SAH
+  "prev. ICH": 기왕 ICH
+  recurrence: 재발
+  eye symptom: 안증상
+  tinnitus: 이명
+  Infection: 감염
+  Congenital: 선천성
+  Seizure: 경련
+  mental change: 의식변화
+  hydro Sx: 수두증 증상
+  iatrogenic: 의인성
+  Iatrogenic: 의인성
+  IICP: 두개내압상승
+  progressive myelopathy: 척수병증
+  Cognitive dysfunction: 인지장애
+  cranial n sign: 뇌신경증상
+  gait disturbance: 보행장애
+  palpable mass: 촉지종괴
+  spine: 척추
+  Vascular: 기타
+  Vsacular: 기타
+
+# ------------------------------------------------------------
+# 3. 질환군 — 대시보드의 핵심 분류축 (엑셀 'Dx' 컬럼 기준)
+# ------------------------------------------------------------
+disease_group:
+  뇌동맥류:
+    - UIA
+    - SAH
+    - pseudoaneurysm
+    - coil related thrombus
+  급성허혈뇌졸중:
+    - occlusion
+    - Infarction
+    - infarction
+    - CRAO
+  혈관협착:
+    - ECAS
+    - ICAS
+  뇌혈관기형:
+    - DAVF
+    - AVM
+    - CM
+    - CCF
+    - AVF
+    - pial AVF
+    - FCCD
+  모야모야병:
+    - MMD
+  뇌내출혈:
+    - ICH
+    - IVH
+  외상:
+    - "Chr. SDH"
+    - Acute SDH
+    - EDH
+    - Contusion
+    - Contusional ICH
+    - skull defect
+    - postop EDH
+    - postop bleeding
+    - CSF leak
+    - CSF leak & wound necrosis
+    - skin defect
+    - foreign body
+    - screw loosening
+  수두증·션트:
+    - hydrocephalus
+    - NPH
+    - IIH
+    - Shunt infection
+    - shunt malfunction
+    - EVD malfunction
+    - shunt distal tip migration
+  종양:
+    - Meningioma
+    - Sphenoidal meningioma
+    - hemangiopericytoma
+    - hemangioblastoma
+    - spinal hemangioblastoma
+    - glomus jugulare
+    - glomus tympanicum
+    - glomus caroticum
+    - glomus facialre
+    - nasopharyngeal tumor
+    - nasal cavity angiofibroma
+    - pharyngeal cancer
+    - scalp cancer
+    - scalp mass
+    - neck mass
+    - orbital tumor
+    - skull base tumor
+    - intraosseus hemangioma
+    - aneurysmal bone cyst
+    - Juvenile fibroangioma
+    - adrenal adenoma
+  정맥동질환:
+    - sinus thrombosis
+    - CVT
+  감염:
+    - brain abscess
+    - wound infection
+    - postop infection
+    - recurrent wound infection
+  기타:
+    - brain swelling
+    - vasospasm
+    - CCA rupture
+    - superior thyroidal artery rupture
+    - postop neck hematoma
+
+# 질환군 표시 순서 (차트 범례/스택 순서)
+disease_group_order:
+  - 뇌동맥류
+  - 급성허혈뇌졸중
+  - 혈관협착
+  - 뇌혈관기형
+  - 모야모야병
+  - 뇌내출혈
+  - 정맥동질환
+  - 외상
+  - 수두증·션트
+  - 종양
+  - 감염
+  - 기타
+  - 미분류
+
+# ------------------------------------------------------------
+# 4. 치료 대분류 (엑셀 'Op ' 컬럼)
+# ------------------------------------------------------------
+treatment:
+  EVT: 혈관내치료
+  surgery: 개두수술
+  hybrid: 복합치료
+  "hybrid (EVT)": 복합치료
+  "hybrid (surgery)": 복합치료
+  "hybrid (Surgery)": 복합치료
+  radiosurgery: 방사선수술
+
+treatment_order:
+  - 혈관내치료
+  - 개두수술
+  - 복합치료
+  - 방사선수술
+  - 미분류
+
+# ------------------------------------------------------------
+# 5. 세부 술기 (엑셀 'Op name' 컬럼)
+#    숫자 0 = clip, 1 = coil 은 아래 numeric_opname 으로 처리
+# ------------------------------------------------------------
+numeric_opname:
+  0: 개두 클립결찰술
+  1: 코일색전술
+
+procedure:
+  mechanical thrombectomy: 기계적 혈전제거술
+  CAS: 경동맥 스텐트
+  CAS fail: 경동맥 스텐트
+  CEA: 경동맥 내막절제술
+  EVD: 뇌실외배액술
+  "EVD & tracheostomy": 뇌실외배액술
+  "craniectomy & EVD": 뇌실외배액술
+  one burrhole trephination: 천공 배액술
+  two burrhole trephination: 천공 배액술
+  Onyx embolization: Onyx/Glue 색전술
+  glue embolization: Onyx/Glue 색전술
+  "onyx & glue embolization": Onyx/Glue 색전술
+  STA-MCA anatomosis: 뇌혈관 우회로술
+  STA-RA-PCA bypass: 뇌혈관 우회로술
+  STA-PCA bypass: 뇌혈관 우회로술
+  OA-PICA anastomosis: 뇌혈관 우회로술
+  EDAS: 뇌혈관 우회로술
+  craniectomy: 감압 두개절제술
+  Craniectomy: 감압 두개절제술
+  VP shunt: 션트 수술
+  VA shunt: 션트 수술
+  cranioplasty: 두개성형술
+  nidus removal: 병변 절제술
+  CM removal: 병변 절제술
+  fistulectomy: 병변 절제술
+  navigation guided cath. Insertion: 네비게이션 카테터삽입
+  intracranial stenting: 두개내 스텐트
+  sinus stenting: 두개내 스텐트
+  tumor embolization: 종양/MMA 색전술
+  MMA embolization: 종양/MMA 색전술
+  balloon angioplasty: 풍선 혈관성형술
+  intracranial balloon angioplasty: 풍선 혈관성형술
+  CCA ballooning with re-suture: 풍선 혈관성형술
+  intraarterial nimodipine injection: 동맥내 약물주입
+  intraarterial tirofiban injection: 동맥내 약물주입
+  IAUK: 동맥내 약물주입
+  Angio only: 진단·기타 시술
+  angio only: 진단·기타 시술
+  Balloon test occlusion: 진단·기타 시술
+  IPSS: 진단·기타 시술
+  failure of procedure: 진단·기타 시술
+  craniotomy: 기타 개두수술
+  endoscopic surgery: 기타 개두수술
+  Excision and biopsy: 기타 개두수술
+  wound revision: 기타 개두수술
+  foreign body removal: 기타 개두수술
+  plate removal: 기타 개두수술
+  GK: 감마나이프/사이버나이프
+  CK: 감마나이프/사이버나이프
+
+# ------------------------------------------------------------
+# 6. 코일색전술 세부 기법 (엑셀 'procedure' 컬럼)
+# ------------------------------------------------------------
+coil_technique_numeric:
+  1: Single catheter
+  2: Double catheter
+  3: Triple catheter
+  4: SAC (스텐트 보조)
+  5: Balloon remodeling
+  6: Stent only
+  7: Flow diverter
+
+coil_technique_text:
+  PAO: 모혈관 폐색술
+  "4,2": SAC (스텐트 보조)
+  WEB: WEB
+  HR: Single catheter
+  "2 - cath. Assist": Double catheter
+  A1 internal trapping: 모혈관 폐색술
+  occlusion: 모혈관 폐색술
+  intentionally stop: 기타
+  onyx embolization: 기타
+  "1st graft stent (graft master)": 기타
+
+# 위 표에서 정확히 일치하는 값이 없을 때, 아래 문자열이 포함되어 있으면 매칭
+# (예: 'WEB 11th case' 처럼 케이스 번호가 붙어도 자동으로 WEB 으로 분류)
+coil_technique_contains:
+  web: WEB
+  trapping: 모혈관 폐색술
+  flow diverter: Flow diverter
+  fred: Flow diverter
+  pipeline: Flow diverter
+  surpass: Flow diverter
+  balloon: Balloon remodeling
+
+coil_technique_order:
+  - Single catheter
+  - Double catheter
+  - Triple catheter
+  - SAC (스텐트 보조)
+  - Balloon remodeling
+  - Stent only
+  - Flow diverter
+  - 모혈관 폐색술
+  - WEB
+  - 기타
+
+# ------------------------------------------------------------
+# 7. 동맥류 위치 정규화 (엑셀 'location' 컬럼)
+#    여기 없는 값은 원문 그대로 표시되며 하위 항목은 '기타'로 묶입니다.
+# ------------------------------------------------------------
+location:
+  pICA: pICA
+  paraclinoid: Paraclinoid
+  "paraclinoid (dorsal)": Paraclinoid
+  "paraclinoid (OA)": Paraclinoid
+  "paraclinoid (SHA)": Paraclinoid
+  AcomA: AcomA
+  MCAB: MCA bifurcation
+  M1: M1
+  M2: M2
+  MCA: MCA (기타)
+  PcomA: PcomA
+  AchoA: AchoA
+  dICA: dICA
+  ICA: ICA (기타)
+  ICAB: ICA bifurcation
+  A1: A1
+  DACA: DACA
+  VA: VA
+  BT: Basilar top
+  BA: Basilar (기타)
+  PICA: PICA
+  SCA: SCA
+  "VB junction": VB junction
+  BBA: BBA
+  PCA: PCA
+  P1: PCA
+  "P1/2": PCA
+  A2: A2
+  parclinoid: Paraclinoid
+  OA: Paraclinoid
+  cavernous: Cavernous ICA
+  "Cavernous ICA": Cavernous ICA
+  "cervical ICA": Cervical ICA
+  "ICA dorsal wall": ICA dorsal wall
+  "M1 inferior trunk": M1
+  "Persistent trigeminal artery": 기타
+  unknown: 미상
