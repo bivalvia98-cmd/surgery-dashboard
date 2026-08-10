@@ -412,8 +412,10 @@ function ticks(max,n){
 function stackedColumn(host,cats,series,opts){
   opts=opts||{};
   const W=Math.max(host.clientWidth||640,320), H=opts.height||272;
+  // 축 라벨이 서로 붙을 만큼 좁으면 자동으로 기울인다 (모바일)
+  const rot=opts.rotate||((W-56)/cats.length)<34;
   // t: 막대 끝 값 라벨이 들어갈 여백
-  const m={t:20,r:12,b:opts.rotate?42:26,l:opts.pctMode?38:44};
+  const m={t:20,r:12,b:rot?42:26,l:opts.pctMode?38:44};
   const iw=W-m.l-m.r, ih=H-m.t-m.b;
   const totals=cats.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
   const max=opts.pctMode?100:Math.max(1,...totals);
@@ -453,15 +455,16 @@ function stackedColumn(host,cats,series,opts){
     if(rows.length) hit(zone,String(c),rows,totals[i]);
     svg.appendChild(zone);
 
-    if(!opts.pctMode&&totals[i]&&opts.capLabel!==false){
+    // 값 라벨은 칸에 들어갈 때만 (좁으면 툴팁·표 보기가 대신함)
+    if(!opts.pctMode&&totals[i]&&opts.capLabel!==false&&band>=28){
       const t=el('text',{x:cx,y:y(totals[i])-6,'text-anchor':'middle','font-size':11,
         fill:V('--ink-2'),'font-weight':600});
       t.textContent=fmt(totals[i]);svg.appendChild(t);
     }
-    const lb=el('text',{x:cx,y:H-(opts.rotate?24:9),'text-anchor':opts.rotate?'end':'middle',
+    const lb=el('text',{x:cx,y:H-(rot?24:9),'text-anchor':rot?'end':'middle',
       'font-size':11,fill:V('--ink-3')});
     lb.textContent=c;
-    if(opts.rotate)lb.setAttribute('transform',`rotate(-40 ${cx} ${H-24})`);
+    if(rot)lb.setAttribute('transform',`rotate(-40 ${cx} ${H-24})`);
     svg.appendChild(lb);
   });
   host.textContent='';host.appendChild(svg);
@@ -471,7 +474,9 @@ function stackedColumn(host,cats,series,opts){
 function lineChart(host,cats,series,opts){
   opts=opts||{};
   const W=Math.max(host.clientWidth||640,320), H=opts.height||272;
-  const m={t:14,r:opts.rightPad||16,b:opts.rotate?42:26,l:44};
+  const dense=cats.length>14;
+  const rot=opts.rotate||(!dense&&((W-60)/cats.length)<34);
+  const m={t:14,r:opts.rightPad||16,b:rot?42:26,l:44};
   const iw=W-m.l-m.r, ih=H-m.t-m.b;
   const all=series.flatMap(s=>s.values.filter(v=>v!=null));
   const max=Math.max(1,...all);
@@ -517,12 +522,12 @@ function lineChart(host,cats,series,opts){
     zone.addEventListener('pointermove',moveTip);
     zone.addEventListener('pointerleave',()=>{cross.setAttribute('opacity','0');hideTip();});
     svg.appendChild(zone);
-    if(cats.length<=14||i%Math.ceil(cats.length/12)===0){
+    if(!dense||i%Math.ceil(cats.length/12)===0){
       const cx=x(i);
-      const lb=el('text',{x:cx,y:H-(opts.rotate?24:9),'text-anchor':opts.rotate?'end':'middle',
+      const lb=el('text',{x:cx,y:H-(rot?24:9),'text-anchor':rot?'end':'middle',
         'font-size':11,fill:V('--ink-3')});
       lb.textContent=c;
-      if(opts.rotate)lb.setAttribute('transform',`rotate(-40 ${cx} ${H-24})`);
+      if(rot)lb.setAttribute('transform',`rotate(-40 ${cx} ${H-24})`);
       svg.appendChild(lb);
     }
   });
