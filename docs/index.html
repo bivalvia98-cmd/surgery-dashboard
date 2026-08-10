@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>수술통계 대시보드 2017–</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#fcfcfb; --plane:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --hair:rgba(11,11,11,0.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  --neutral:#898781;
+  --seq1:#cde2fb; --seq2:#9ec5f4; --seq3:#6da7ec; --seq4:#3987e5;
+  --seq5:#256abf; --seq6:#184f95; --seq7:#0d366b;
+  --good:#0ca30c; --critical:#d03b3b;
+  --font: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --surface-1:#1a1a19; --plane:#0d0d0d;
+    --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --grid:#2c2c2a; --axis:#383835; --hair:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --seq1:#184f95; --seq2:#256abf; --seq3:#2a78d6; --seq4:#3987e5;
+    --seq5:#5598e7; --seq6:#86b6ef; --seq7:#b7d3f6;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-1:#1a1a19; --plane:#0d0d0d;
+  --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --hair:rgba(255,255,255,0.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --seq1:#184f95; --seq2:#256abf; --seq3:#2a78d6; --seq4:#3987e5;
+  --seq5:#5598e7; --seq6:#86b6ef; --seq7:#b7d3f6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--plane);color:var(--ink-1);font-family:var(--font);
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:4px}
+header.top h1{font-size:20px;font-weight:650;margin:0;letter-spacing:-0.01em}
+header.top .sub{color:var(--ink-3);font-size:13px}
+header.top .spacer{flex:1}
+button.ghost{font:inherit;font-size:12px;color:var(--ink-2);background:var(--surface-1);
+  border:1px solid var(--hair);border-radius:7px;padding:5px 10px;cursor:pointer}
+button.ghost:hover{color:var(--ink-1);border-color:var(--axis)}
+button.ghost[aria-pressed="true"]{background:var(--ink-1);color:var(--surface-1);border-color:var(--ink-1)}
+
+/* ---------- filter row ---------- */
+.filters{position:sticky;top:0;z-index:30;background:var(--plane);
+  display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;
+  padding:12px 0 12px;margin:14px 0 6px;border-bottom:1px solid var(--hair)}
+.filters .f{display:flex;flex-direction:column;gap:4px}
+.filters label{font-size:11px;color:var(--ink-3);letter-spacing:.02em}
+.filters select{font:inherit;font-size:13px;color:var(--ink-1);background:var(--surface-1);
+  border:1px solid var(--hair);border-radius:7px;padding:6px 8px;min-width:110px;cursor:pointer}
+.filters select:focus-visible{outline:2px solid var(--s1);outline-offset:1px}
+.filters .yr{display:flex;align-items:center;gap:6px}
+.filters .yr select{min-width:82px}
+.filters .grow{flex:1}
+.scoped{color:var(--ink-3);font-size:12px;padding-bottom:7px}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 22px}
+.kpi{background:var(--surface-1);border:1px solid var(--hair);border-radius:12px;padding:14px 16px}
+.kpi .lab{font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.kpi .val{font-size:26px;font-weight:650;letter-spacing:-0.02em;line-height:1.1}
+.kpi .note{font-size:11px;color:var(--ink-3);margin-top:4px}
+.kpi.hero{grid-column:span 2}
+.kpi.hero .val{font-size:52px;font-weight:680;letter-spacing:-0.03em}
+@media(max-width:560px){.kpi.hero{grid-column:span 2}}
+
+/* ---------- cards ---------- */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.card{background:var(--surface-1);border:1px solid var(--hair);border-radius:12px;
+  padding:16px 16px 12px;min-width:0}
+.card.full{grid-column:1 / -1}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.card{grid-column:1 / -1 !important}}
+.card h2{font-size:14px;font-weight:620;margin:0 0 2px;letter-spacing:-0.005em}
+.card .desc{font-size:12px;color:var(--ink-3);margin:0 0 10px}
+.card .hd{display:flex;align-items:flex-start;gap:10px}
+.card .hd .grow{flex:1;min-width:0}
+.tools{display:flex;gap:6px;flex:none}
+.tools button{font:inherit;font-size:11px;color:var(--ink-3);background:transparent;
+  border:1px solid var(--hair);border-radius:6px;padding:3px 7px;cursor:pointer}
+.tools button:hover{color:var(--ink-1);border-color:var(--axis)}
+.tools button[aria-pressed="true"]{color:var(--ink-1);border-color:var(--axis);background:var(--plane)}
+.plot{width:100%;overflow-x:auto}
+svg{display:block;max-width:100%}
+svg text{font-family:var(--font)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 2px;font-size:12px;color:var(--ink-2)}
+.legend .it{display:inline-flex;align-items:center;gap:6px;cursor:default}
+.legend .sw{width:10px;height:10px;border-radius:3px;flex:none}
+.legend .ln{width:14px;height:2px;border-radius:2px;flex:none}
+
+/* ---------- table view ---------- */
+.tbl{display:none;overflow-x:auto;margin-top:4px}
+.tbl table{border-collapse:collapse;font-size:12px;width:100%;
+  font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:5px 9px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;position:sticky;left:0;background:var(--surface-1)}
+.tbl thead th{color:var(--ink-3);font-weight:550;border-bottom:1px solid var(--axis)}
+.tbl tfoot td{font-weight:620;border-top:1px solid var(--axis);border-bottom:none}
+.card.tableview .plot,.card.tableview .legend{display:none}
+.card.tableview .tbl{display:block}
+
+/* ---------- tooltip ---------- */
+#tip{position:fixed;z-index:100;pointer-events:none;opacity:0;transition:opacity .08s;
+  background:var(--surface-1);border:1px solid var(--axis);border-radius:9px;
+  padding:9px 11px;font-size:12px;color:var(--ink-2);
+  box-shadow:0 6px 22px rgba(0,0,0,.16);max-width:280px}
+#tip .t{font-size:12px;color:var(--ink-3);margin-bottom:5px}
+#tip .r{display:flex;align-items:center;gap:8px;white-space:nowrap;line-height:1.65}
+#tip .r .k{width:12px;height:2px;border-radius:2px;flex:none}
+#tip .r .n{flex:1;color:var(--ink-2)}
+#tip .r .v{font-weight:640;color:var(--ink-1);font-variant-numeric:tabular-nums}
+#tip .tot{border-top:1px solid var(--grid);margin-top:5px;padding-top:5px}
+
+.note{font-size:12px;color:var(--ink-3);margin:8px 0 0}
+.sect{margin:30px 0 12px;font-size:13px;font-weight:620;color:var(--ink-2);
+  letter-spacing:.03em;text-transform:none;display:flex;align-items:center;gap:10px}
+.sect::after{content:"";flex:1;height:1px;background:var(--hair)}
+footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--hair);
+  font-size:12px;color:var(--ink-3);line-height:1.7}
+.warn{background:var(--surface-1);border:1px solid var(--hair);border-left:3px solid var(--s4);
+  border-radius:8px;padding:10px 13px;font-size:12px;color:var(--ink-2);margin:14px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>수술통계 대시보드</h1>
+  <span class="sub" id="period"></span>
+  <span class="spacer"></span>
+  <button class="ghost" id="themeBtn" type="button">테마</button>
+</header>
+
+<div class="filters" id="filters">
+  <div class="f"><label for="yFrom">기간</label>
+    <div class="yr"><select id="yFrom"></select><span style="color:var(--ink-3)">–</span><select id="yTo"></select></div>
+  </div>
+  <div class="f"><label for="fCat">대분류</label><select id="fCat"></select></div>
+  <div class="f"><label for="fGrp">질환군</label><select id="fGrp"></select></div>
+  <div class="f"><label for="fTx">치료</label><select id="fTx"></select></div>
+  <div class="f"><label for="fAtt">주치의</label><select id="fAtt"></select></div>
+  <div class="f"><label>&nbsp;</label><button class="ghost" id="reset" type="button">필터 초기화</button></div>
+  <div class="grow"></div>
+  <div class="scoped" id="scoped"></div>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="sect">전체 추이</div>
+<div class="grid">
+  <div class="card full" id="c-trend">
+    <div class="hd"><div class="grow">
+      <h2>연도별 수술 건수</h2>
+      <p class="desc" id="d-trend">대분류별 누적</p>
+    </div><div class="tools">
+      <button type="button" data-mode="year" aria-pressed="true">연도</button>
+      <button type="button" data-mode="month">월별</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-grp">
+    <div class="hd"><div class="grow">
+      <h2>질환군별 추이</h2><p class="desc" id="d-grp">연도별 누적 건수 · 진단명(Dx) 기준 분류</p>
+    </div><div class="tools">
+      <button type="button" data-mode="abs" aria-pressed="true">건수</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-tx">
+    <div class="hd"><div class="grow">
+      <h2>치료 방식별 추이</h2><p class="desc">혈관내치료 · 개두수술 · 복합 · 방사선</p>
+    </div><div class="tools">
+      <button type="button" data-mode="abs" aria-pressed="true">건수</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+</div>
+
+<div class="sect">뇌동맥류</div>
+<div class="grid">
+  <div class="card" id="c-an">
+    <div class="hd"><div class="grow">
+      <h2>Clip vs Coil 추이</h2><p class="desc" id="d-an"></p>
+    </div><div class="tools">
+      <button type="button" data-mode="abs" aria-pressed="true">건수</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-coil">
+    <div class="hd"><div class="grow">
+      <h2>코일 세부기법 추이</h2><p class="desc">코일색전술 건에 한함</p>
+    </div><div class="tools">
+      <button type="button" data-mode="abs" aria-pressed="true">건수</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-loc">
+    <div class="hd"><div class="grow">
+      <h2>동맥류 위치 분포</h2><p class="desc">상위 15개 위치</p>
+    </div><div class="tools"><button type="button" data-table>표</button></div></div>
+    <div class="plot"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-pres">
+    <div class="hd"><div class="grow">
+      <h2>파열 여부별 추이</h2><p class="desc">SAH(파열) vs UIA(비파열)</p>
+    </div><div class="tools">
+      <button type="button" data-mode="abs" aria-pressed="true">건수</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+</div>
+
+<div class="sect">술기 · 진료</div>
+<div class="grid">
+  <div class="card" id="c-proc">
+    <div class="hd"><div class="grow">
+      <h2>세부 술기 분포</h2><p class="desc" id="d-proc">상위 16개 술기</p>
+    </div><div class="tools"><button type="button" data-table>표</button></div></div>
+    <div class="plot"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-att">
+    <div class="hd"><div class="grow">
+      <h2>주치의별 추이</h2><p class="desc">연도별 담당 건수</p>
+    </div><div class="tools">
+      <button type="button" data-mode="abs" aria-pressed="true">건수</button>
+      <button type="button" data-mode="pct">비율</button>
+      <button type="button" data-table>표</button>
+    </div></div>
+    <div class="plot"></div><div class="legend"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-cx">
+    <div class="hd"><div class="grow">
+      <h2>시술 관련 합병증률</h2><p class="desc" id="d-cx">연도별 %</p>
+    </div><div class="tools"><button type="button" data-table>표</button></div></div>
+    <div class="plot"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card" id="c-age">
+    <div class="hd"><div class="grow">
+      <h2>연령대 분포</h2><p class="desc" id="d-age"></p>
+    </div><div class="tools"><button type="button" data-table>표</button></div></div>
+    <div class="plot"></div><div class="tbl"></div>
+  </div>
+
+  <div class="card full" id="c-heat">
+    <div class="hd"><div class="grow">
+      <h2>질환군 × 연도 교차표</h2><p class="desc">색 농도 = 해당 연도 내 비중</p>
+    </div><div class="tools"><button type="button" data-table>표</button></div></div>
+    <div class="plot"></div><div class="tbl"></div>
+  </div>
+</div>
+
+<div class="warn" id="gapnote"></div>
+
+<footer>
+  <div id="meta"></div>
+  <div style="margin-top:8px">
+    이 페이지에는 환자 성명·등록번호·수술일자·개별 기록이 일절 포함되어 있지 않습니다.
+    모든 수치는 집계값입니다.
+  </div>
+</footer>
+
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+const D = window.SURGERY_DATA;
+if(!D){document.querySelector('.wrap').innerHTML='<p>data.js 를 불러오지 못했습니다. build.py 를 실행하세요.</p>';return;}
+
+/* ============ 데이터 접근 ============ */
+const F = {}; D.fields.forEach((f,i)=>F[f]=i);
+const dim = (k,i)=> i<0 ? null : D.dims[k][i];
+const CASES = D.cases;
+
+/* ============ 색상: 엔티티 고정 배정 (필터해도 색이 바뀌지 않음) ============ */
+const V = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const SLOT = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const NEU = '--neutral';
+const COLORMAP = {
+  cat:{'혈관':0,'외상':1,'종양':2,'기타':3,'미분류':-1},
+  grp:{'뇌동맥류':0,'급성허혈뇌졸중':1,'혈관협착':2,'뇌혈관기형':3,'모야모야병':4,
+       '뇌내출혈':5,'외상':6,'수두증·션트':7,'기타':-1},
+  tx:{'혈관내치료':0,'개두수술':1,'복합치료':2,'방사선수술':3,'미분류':-1},
+  an:{'코일색전술':0,'개두 클립결찰술':1,'조영술만 시행':-1},
+  coil:{'Single catheter':0,'Double catheter':1,'Triple catheter':2,'SAC (스텐트 보조)':3,
+        'Stent only':4,'Flow diverter':5,'모혈관 폐색술':6,'WEB':7,'기타':-1},
+  att:{'C':0,'NU':1,'S':2,'L':3,'ENT':4,'기타':-1},
+  rupt:{'비파열 (UIA)':0,'파열 (SAH)':7}
+};
+const colorOf=(fam,name)=>{const s=COLORMAP[fam]&&COLORMAP[fam][name];return V(s>=0?SLOT[s]:NEU);};
+
+/* 각 계열의 표시 순서 = COLORMAP 키 순서 (스택/범례 순서 고정) */
+const famOrder = fam => Object.keys(COLORMAP[fam]);
+
+/* ============ 필터 ============ */
+const state={yFrom:null,yTo:null,cat:'',grp:'',tx:'',att:''};
+const YEARS=[...new Set(CASES.map(r=>r[F.y]))].sort((a,b)=>a-b);
+const ATT_TOP=['C','NU','S','L','ENT'];
+
+function attOf(r){const a=dim('a',r[F.a]);return a&&ATT_TOP.includes(a)?a:'기타';}
+function grpOf(r){const g=dim('g',r[F.g]);return (g in COLORMAP.grp)?g:'기타';}
+
+function filtered(){
+  return CASES.filter(r=>{
+    if(r[F.y]<state.yFrom||r[F.y]>state.yTo) return false;
+    if(state.cat && dim('c',r[F.c])!==state.cat) return false;
+    if(state.grp && grpOf(r)!==state.grp) return false;
+    if(state.tx  && dim('t',r[F.t])!==state.tx) return false;
+    if(state.att && attOf(r)!==state.att) return false;
+    return true;
+  });
+}
+
+/* ============ SVG 유틸 ============ */
+const NS='http://www.w3.org/2000/svg';
+const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const fmt=n=>n.toLocaleString('ko-KR');
+const pct=(n,d)=>d?Math.round(n/d*1000)/10:0;
+
+const tip=document.getElementById('tip');
+function showTip(ev,title,rows,total){
+  tip.textContent='';
+  const t=document.createElement('div');t.className='t';t.textContent=title;tip.appendChild(t);
+  rows.forEach(([c,name,val])=>{
+    const r=document.createElement('div');r.className='r';
+    const k=document.createElement('span');k.className='k';k.style.background=c;
+    const n=document.createElement('span');n.className='n';n.textContent=name;
+    const v=document.createElement('span');v.className='v';v.textContent=val;
+    r.append(k,n,v);tip.appendChild(r);
+  });
+  if(total!=null){
+    const r=document.createElement('div');r.className='r tot';
+    const n=document.createElement('span');n.className='n';n.textContent='합계';
+    const v=document.createElement('span');v.className='v';v.textContent=fmt(total)+'건';
+    r.append(n,v);tip.appendChild(r);
+  }
+  tip.style.opacity='1';moveTip(ev);
+}
+function moveTip(ev){
+  const p=12,w=tip.offsetWidth,h=tip.offsetHeight;
+  let x=ev.clientX+p,y=ev.clientY+p;
+  if(x+w>innerWidth-8)x=ev.clientX-w-p;
+  if(y+h>innerHeight-8)y=ev.clientY-h-p;
+  tip.style.left=Math.max(8,x)+'px';tip.style.top=Math.max(8,y)+'px';
+}
+const hideTip=()=>{tip.style.opacity='0';};
+addEventListener('scroll',hideTip,{passive:true});
+
+function hit(node,title,rows,total){
+  node.style.cursor='default';
+  node.addEventListener('pointerenter',e=>showTip(e,title,rows,total));
+  node.addEventListener('pointermove',moveTip);
+  node.addEventListener('pointerleave',hideTip);
+  node.setAttribute('tabindex','0');
+  node.addEventListener('focus',e=>{
+    const b=node.getBoundingClientRect();
+    showTip({clientX:b.left+b.width/2,clientY:b.top},title,rows,total);
+  });
+  node.addEventListener('blur',hideTip);
+}
+
+/* 눈금 값 계산 — 최상단 눈금은 반드시 최대값 이상이 되도록 올림 */
+function ticks(max,n){
+  if(max<=0)return[0,1];
+  const raw=max/n,mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw)||10*mag;
+  const top=Math.ceil(max/step)*step;
+  const out=[];for(let v=0;v<=top+step*1e-6;v+=step)out.push(Math.round(v*100)/100);
+  return out;
+}
+
+/* ============ 차트: 누적 세로막대 ============ */
+function stackedColumn(host,cats,series,opts){
+  opts=opts||{};
+  const W=Math.max(host.clientWidth||640,320), H=opts.height||272;
+  // t: 막대 끝 값 라벨이 들어갈 여백
+  const m={t:20,r:12,b:opts.rotate?42:26,l:opts.pctMode?38:44};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const totals=cats.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+  const max=opts.pctMode?100:Math.max(1,...totals);
+  const tk=ticks(max,4), top=tk[tk.length-1];
+  const svg=el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:'img'});
+  const y=v=>m.t+ih-(v/top)*ih;
+
+  tk.forEach(t=>{
+    svg.appendChild(el('line',{x1:m.l,x2:m.l+iw,y1:y(t),y2:y(t),
+      stroke:t===0?V('--axis'):V('--grid'),'stroke-width':1}));
+    const tx=el('text',{x:m.l-7,y:y(t)+4,'text-anchor':'end','font-size':11,fill:V('--ink-3')});
+    tx.textContent=opts.pctMode?t+'%':fmt(t);
+    svg.appendChild(tx);
+  });
+
+  const band=iw/cats.length, bw=Math.min(24,band*0.62), GAP=2;
+  cats.forEach((c,i)=>{
+    const cx=m.l+band*i+band/2, x=cx-bw/2;
+    const denom=opts.pctMode?(totals[i]||1):1;
+    let acc=0;
+    const rows=[];
+    series.forEach(se=>{
+      const raw=se.values[i]; if(!raw)return;
+      const val=opts.pctMode?raw/denom*100:raw;
+      const y0=y(acc), y1=y(acc+val);
+      let h=y0-y1; acc+=val;
+      const draw=Math.max(0,h-GAP);
+      if(draw>0.4){
+        const r=el('rect',{x,y:y1,width:bw,height:draw,fill:se.color,rx:2});
+        hit(r,`${c} · ${se.name}`,[[se.color,se.name,fmt(raw)+'건'+(totals[i]?` (${pct(raw,totals[i])}%)`:'')]]);
+        svg.appendChild(r);
+      }
+      rows.unshift([se.color,se.name,fmt(raw)+'건'+(opts.pctMode&&totals[i]?` · ${pct(raw,totals[i])}%`:'')]);
+    });
+    // 열 전체 히트영역 (막대 사이 여백도 잡아줌)
+    const zone=el('rect',{x:m.l+band*i,y:m.t,width:band,height:ih,fill:'transparent'});
+    if(rows.length) hit(zone,String(c),rows,totals[i]);
+    svg.appendChild(zone);
+
+    if(!opts.pctMode&&totals[i]&&opts.capLabel!==false){
+      const t=el('text',{x:cx,y:y(totals[i])-6,'text-anchor':'middle','font-size':11,
+        fill:V('--ink-2'),'font-weight':600});
+      t.textContent=fmt(totals[i]);svg.appendChild(t);
+    }
+    const lb=el('text',{x:cx,y:H-(opts.rotate?24:9),'text-anchor':opts.rotate?'end':'middle',
+      'font-size':11,fill:V('--ink-3')});
+    lb.textContent=c;
+    if(opts.rotate)lb.setAttribute('transform',`rotate(-40 ${cx} ${H-24})`);
+    svg.appendChild(lb);
+  });
+  host.textContent='';host.appendChild(svg);
+}
+
+/* ============ 차트: 선 ============ */
+function lineChart(host,cats,series,opts){
+  opts=opts||{};
+  const W=Math.max(host.clientWidth||640,320), H=opts.height||272;
+  const m={t:14,r:opts.rightPad||16,b:opts.rotate?42:26,l:44};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const all=series.flatMap(s=>s.values.filter(v=>v!=null));
+  const max=Math.max(1,...all);
+  const tk=ticks(opts.max||max,4), top=tk[tk.length-1];
+  const svg=el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:'img'});
+  const y=v=>m.t+ih-(v/top)*ih;
+  const x=i=>cats.length===1?m.l+iw/2:m.l+(iw/(cats.length-1))*i;
+
+  tk.forEach(t=>{
+    svg.appendChild(el('line',{x1:m.l,x2:m.l+iw,y1:y(t),y2:y(t),
+      stroke:t===0?V('--axis'):V('--grid'),'stroke-width':1}));
+    const tx=el('text',{x:m.l-7,y:y(t)+4,'text-anchor':'end','font-size':11,fill:V('--ink-3')});
+    tx.textContent=opts.suffix?t+opts.suffix:fmt(t);svg.appendChild(tx);
+  });
+
+  series.forEach(se=>{
+    let d='',open=false;
+    se.values.forEach((v,i)=>{
+      if(v==null){open=false;return;}
+      d+=(open?'L':'M')+x(i)+' '+y(v)+' ';open=true;
+    });
+    svg.appendChild(el('path',{d,fill:'none',stroke:se.color,'stroke-width':2,
+      'stroke-linejoin':'round','stroke-linecap':'round'}));
+    se.values.forEach((v,i)=>{
+      if(v==null)return;
+      if(cats.length>28 && i%2) return;
+      svg.appendChild(el('circle',{cx:x(i),cy:y(v),r:4,fill:se.color,
+        stroke:V('--surface-1'),'stroke-width':2}));
+    });
+  });
+
+  // 열 단위 히트영역 + 크로스헤어
+  const cross=el('line',{x1:0,x2:0,y1:m.t,y2:m.t+ih,stroke:V('--axis'),'stroke-width':1,opacity:0});
+  svg.appendChild(cross);
+  const stepw=cats.length>1?iw/(cats.length-1):iw;
+  cats.forEach((c,i)=>{
+    const zx=x(i)-stepw/2;
+    const zone=el('rect',{x:Math.max(m.l,zx),y:m.t,width:Math.min(stepw,iw),height:ih,fill:'transparent'});
+    const rows=series.map(s=>[s.color,s.name,
+      s.values[i]==null?'—':(opts.suffix?s.values[i]+opts.suffix:fmt(s.values[i])+'건')]);
+    zone.addEventListener('pointerenter',e=>{cross.setAttribute('x1',x(i));cross.setAttribute('x2',x(i));
+      cross.setAttribute('opacity','1');showTip(e,String(c),rows,opts.totals?opts.totals[i]:null);});
+    zone.addEventListener('pointermove',moveTip);
+    zone.addEventListener('pointerleave',()=>{cross.setAttribute('opacity','0');hideTip();});
+    svg.appendChild(zone);
+    if(cats.length<=14||i%Math.ceil(cats.length/12)===0){
+      const cx=x(i);
+      const lb=el('text',{x:cx,y:H-(opts.rotate?24:9),'text-anchor':opts.rotate?'end':'middle',
+        'font-size':11,fill:V('--ink-3')});
+      lb.textContent=c;
+      if(opts.rotate)lb.setAttribute('transform',`rotate(-40 ${cx} ${H-24})`);
+      svg.appendChild(lb);
+    }
+  });
+
+  // 마지막 점 직접 라벨 (계열 4개 이하일 때만)
+  if(series.length<=4&&opts.endLabel!==false){
+    series.forEach(se=>{
+      let li=-1;se.values.forEach((v,i)=>{if(v!=null)li=i;});
+      if(li<0)return;
+      const t=el('text',{x:x(li)+8,y:y(se.values[li])+4,'font-size':11,
+        fill:V('--ink-2'),'font-weight':600});
+      t.textContent=opts.suffix?se.values[li]+opts.suffix:fmt(se.values[li]);
+      if(x(li)+34>m.l+iw){t.setAttribute('x',x(li)-8);t.setAttribute('text-anchor','end');}
+      svg.appendChild(t);
+    });
+  }
+  host.textContent='';host.appendChild(svg);
+}
+
+/* ============ 차트: 가로막대 ============ */
+function barH(host,items,opts){
+  opts=opts||{};
+  const W=Math.max(host.clientWidth||520,300);
+  const rowH=26, m={t:6,r:52,b:6,l:opts.labelW||128};
+  const H=m.t+m.b+items.length*rowH;
+  const iw=W-m.l-m.r;
+  const max=Math.max(1,...items.map(d=>d[1]));
+  const svg=el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:'img'});
+  const col=opts.color||V('--s1');
+  const total=items.reduce((s,d)=>s+d[1],0);
+  items.forEach((d,i)=>{
+    const cy=m.t+i*rowH+rowH/2, bh=Math.min(14,rowH-12);
+    const w=Math.max(1,(d[1]/max)*iw);
+    const r=el('rect',{x:m.l,y:cy-bh/2,width:w,height:bh,fill:col,rx:3});
+    svg.appendChild(r);
+    const lb=el('text',{x:m.l-8,y:cy+4,'text-anchor':'end','font-size':11.5,fill:V('--ink-2')});
+    lb.textContent=d[0];svg.appendChild(lb);
+    const vl=el('text',{x:m.l+w+7,y:cy+4,'font-size':11,fill:V('--ink-2'),
+      'font-weight':600,'font-variant-numeric':'tabular-nums'});
+    vl.textContent=fmt(d[1]);svg.appendChild(vl);
+    const zone=el('rect',{x:0,y:m.t+i*rowH,width:W,height:rowH,fill:'transparent'});
+    hit(zone,d[0],[[col,'건수',fmt(d[1])+'건'+(total?` (${pct(d[1],total)}%)`:'')]]);
+    svg.appendChild(zone);
+  });
+  host.textContent='';host.appendChild(svg);
+}
+
+/* ============ 차트: 히트맵 ============ */
+function heatmap(host,rowsLab,colsLab,matrix,colTotals){
+  const W=Math.max(host.clientWidth||760,340);
+  const m={t:24,r:8,b:8,l:120};
+  const cellH=26, cw=(W-m.l-m.r)/colsLab.length;
+  const H=m.t+m.b+rowsLab.length*cellH;
+  const svg=el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:'img'});
+  const seq=['--seq1','--seq2','--seq3','--seq4','--seq5','--seq6','--seq7'].map(V);
+  colsLab.forEach((c,j)=>{
+    const t=el('text',{x:m.l+cw*j+cw/2,y:15,'text-anchor':'middle','font-size':11,fill:V('--ink-3')});
+    t.textContent=c;svg.appendChild(t);
+  });
+  rowsLab.forEach((rl,i)=>{
+    const t=el('text',{x:m.l-8,y:m.t+cellH*i+cellH/2+4,'text-anchor':'end','font-size':11.5,fill:V('--ink-2')});
+    t.textContent=rl;svg.appendChild(t);
+    colsLab.forEach((cl,j)=>{
+      const v=matrix[i][j], share=colTotals[j]?v/colTotals[j]:0;
+      const x=m.l+cw*j+1, y=m.t+cellH*i+1, w=cw-2, h=cellH-2;
+      let fill='transparent',dark=false;
+      if(v>0){
+        const k=Math.min(6,Math.floor(Math.pow(share,0.55)*7));
+        fill=seq[k];dark=k>=4;
+      }
+      const rect=el('rect',{x,y,width:w,height:h,fill,rx:3});
+      svg.appendChild(rect);
+      if(v>0&&w>26){
+        const t2=el('text',{x:x+w/2,y:y+h/2+4,'text-anchor':'middle','font-size':11,
+          'font-variant-numeric':'tabular-nums',
+          fill:dark?'#ffffff':V('--ink-1')});
+        t2.textContent=v;svg.appendChild(t2);
+      }
+      const zone=el('rect',{x,y,width:w,height:h,fill:'transparent'});
+      hit(zone,`${rl} · ${cl}`,[[seq[4],'건수',fmt(v)+'건'],[V('--neutral'),'해당연도 비중',pct(v,colTotals[j])+'%']]);
+      svg.appendChild(zone);
+    });
+  });
+  host.textContent='';host.appendChild(svg);
+}
+
+/* ============ 범례 / 표 ============ */
+function legend(host,series,shape){
+  host.textContent='';
+  series.forEach(s=>{
+    const it=document.createElement('span');it.className='it';
+    const sw=document.createElement('span');sw.className=shape==='line'?'ln':'sw';
+    sw.style.background=s.color;
+    const tx=document.createElement('span');tx.textContent=s.name;
+    it.append(sw,tx);host.appendChild(it);
+  });
+}
+function tableView(host,head,rows,foot){
+  host.textContent='';
+  const t=document.createElement('table');
+  const th=document.createElement('thead'),tr=document.createElement('tr');
+  head.forEach(h=>{const c=document.createElement('th');c.textContent=h;tr.appendChild(c);});
+  th.appendChild(tr);t.appendChild(th);
+  const tb=document.createElement('tbody');
+  rows.forEach(r=>{const x=document.createElement('tr');
+    r.forEach(v=>{const c=document.createElement('td');c.textContent=v;x.appendChild(c);});
+    tb.appendChild(x);});
+  t.appendChild(tb);
+  if(foot){const tf=document.createElement('tfoot'),fr=document.createElement('tr');
+    foot.forEach(v=>{const c=document.createElement('td');c.textContent=v;fr.appendChild(c);});
+    tf.appendChild(fr);t.appendChild(tf);}
+  host.appendChild(t);
+}
+
+/* ============ 집계 헬퍼 ============ */
+function crossYear(rows,keyFn,order,years){
+  const m=new Map(order.map(o=>[o,years.map(()=>0)]));
+  const yi=new Map(years.map((y,i)=>[y,i]));
+  rows.forEach(r=>{
+    const k=keyFn(r); if(k==null||!m.has(k))return;
+    const i=yi.get(r[F.y]); if(i==null)return;
+    m.get(k)[i]++;
+  });
+  return order.map(o=>({name:o,values:m.get(o)})).filter(s=>s.values.some(v=>v>0));
+}
+function countBy(rows,keyFn){
+  const m=new Map();
+  rows.forEach(r=>{const k=keyFn(r);if(k==null)return;m.set(k,(m.get(k)||0)+1);});
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+}
+
+/* ============ 카드 모드/표 토글 ============ */
+const modes={};
+function cardMode(id){return modes[id]||'abs';}
+document.querySelectorAll('.card').forEach(card=>{
+  card.querySelectorAll('.tools button[data-mode]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      card.querySelectorAll('.tools button[data-mode]').forEach(o=>o.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      modes[card.id]=b.dataset.mode;render();
+    });
+  });
+  const tb=card.querySelector('.tools button[data-table]');
+  if(tb) tb.addEventListener('click',()=>{
+    const on=card.classList.toggle('tableview');
+    tb.setAttribute('aria-pressed',on?'true':'false');
+    if(!on)render();
+  });
+});
+
+/* ============ 렌더 ============ */
+const $=s=>document.querySelector(s);
+const plotOf=id=>document.querySelector('#'+id+' .plot');
+const legOf =id=>document.querySelector('#'+id+' .legend');
+const tblOf =id=>document.querySelector('#'+id+' .tbl');
+const MONTHS=(()=>{const out=[];for(const y of YEARS)for(let m=1;m<=12;m++)out.push([y,m]);return out;})();
+
+function render(){
+  const rows=filtered();
+  const years=YEARS.filter(y=>y>=state.yFrom&&y<=state.yTo);
+  const N=rows.length;
+
+  /* --- KPI --- */
+  const anRows=rows.filter(r=>r[F.an]===1);
+  const evt=rows.filter(r=>dim('t',r[F.t])==='혈관내치료').length;
+  const srg=rows.filter(r=>dim('t',r[F.t])==='개두수술').length;
+  const cxKnown=rows.filter(r=>r[F.x]>=0), cxYes=cxKnown.filter(r=>r[F.x]===1).length;
+  const thisYear=Math.max(...years), lastY=rows.filter(r=>r[F.y]===thisYear).length;
+  const kpi=[
+    ['총 수술 건수',fmt(N),`${state.yFrom}–${state.yTo}년`,true],
+    [`${thisYear}년 건수`,fmt(lastY),D.meta.date_max+' 기준'],
+    ['동맥류 치료',fmt(anRows.length),`clip ${fmt(anRows.filter(r=>dim('o',r[F.o])==='개두 클립결찰술').length)} · coil ${fmt(anRows.filter(r=>dim('o',r[F.o])==='코일색전술').length)}`],
+    ['혈관내치료 비율',N?pct(evt,N)+'%':'—',`${fmt(evt)}건 / 개두 ${fmt(srg)}건`],
+    ['시술 관련 합병증률',cxKnown.length?pct(cxYes,cxKnown.length)+'%':'—',`${fmt(cxYes)}건 / 기록 ${fmt(cxKnown.length)}건`],
+  ];
+  const kw=$('#kpis');kw.textContent='';
+  kpi.forEach(([lab,val,note,hero])=>{
+    const d=document.createElement('div');d.className='kpi'+(hero?' hero':'');
+    const a=document.createElement('div');a.className='lab';a.textContent=lab;
+    const b=document.createElement('div');b.className='val';b.textContent=val;
+    const c=document.createElement('div');c.className='note';c.textContent=note;
+    d.append(a,b,c);kw.appendChild(d);
+  });
+  $('#scoped').textContent=`${fmt(N)}건 표시 중 (전체 ${fmt(D.meta.total)}건)`;
+
+  /* --- 1. 연도별 총 건수 --- */
+  {
+    const id='c-trend',mode=modes[id]||'year';
+    const cats=famOrder('cat');
+    if(mode==='month'){
+      const mk=new Map();
+      rows.forEach(r=>{const k=r[F.y]*100+r[F.m];mk.set(k,(mk.get(k)||0)+1);});
+      const ms=MONTHS.filter(([y])=>y>=state.yFrom&&y<=state.yTo);
+      const labels=ms.map(([y,m])=>m===1?`${y}`:(m===7?'7':''));
+      const vals=ms.map(([y,m])=>mk.get(y*100+m)||0);
+      lineChart(plotOf(id),labels,[{name:'월별 건수',color:V('--s1'),values:vals}],
+        {height:250,endLabel:false});
+      legOf(id).textContent='';
+      $('#d-trend').textContent='월별 건수 — 2024년 7월~2025년 8월 공백이 미시행 기간입니다';
+      tableView(tblOf(id),['연월','건수'],
+        ms.map(([y,m],i)=>[`${y}-${String(m).padStart(2,'0')}`,fmt(vals[i])]),
+        ['합계',fmt(vals.reduce((a,b)=>a+b,0))]);
+    }else{
+      const series=crossYear(rows,r=>dim('c',r[F.c]),cats,years)
+        .map(s=>({...s,color:colorOf('cat',s.name)}));
+      stackedColumn(plotOf(id),years,series,{height:280,pctMode:mode==='pct'});
+      legend(legOf(id),series);
+      $('#d-trend').textContent=mode==='pct'?'대분류 구성비 (%)':'대분류별 누적 건수';
+      const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+      tableView(tblOf(id),['대분류',...years.map(String),'합계'],
+        series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+        ['합계',...tot.map(fmt),fmt(N)]);
+    }
+  }
+
+  /* --- 2. 질환군별 --- */
+  {
+    const id='c-grp',order=famOrder('grp');
+    const series=crossYear(rows,grpOf,order,years).map(s=>({...s,color:colorOf('grp',s.name)}));
+    stackedColumn(plotOf(id),years,series,{height:280,pctMode:cardMode(id)==='pct',capLabel:false});
+    legend(legOf(id),series);
+    const anDx=rows.filter(r=>grpOf(r)==='뇌동맥류').length;
+    $('#d-grp').textContent=
+      `진단명(Dx) 기준 분류 · 뇌동맥류 ${fmt(anDx)}건은 진단 기준이며, `+
+      `이 중 clip/coil 치료는 ${fmt(anRows.length)}건입니다`;
+    const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    tableView(tblOf(id),['질환군',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...tot.map(fmt),fmt(N)]);
+  }
+
+  /* --- 3. 치료별 --- */
+  {
+    const id='c-tx',order=famOrder('tx');
+    const series=crossYear(rows,r=>dim('t',r[F.t]),order,years).map(s=>({...s,color:colorOf('tx',s.name)}));
+    stackedColumn(plotOf(id),years,series,{height:280,pctMode:cardMode(id)==='pct',capLabel:false});
+    legend(legOf(id),series);
+    const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    tableView(tblOf(id),['치료',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...tot.map(fmt),fmt(N)]);
+  }
+
+  /* --- 4. 동맥류 clip vs coil --- */
+  {
+    const id='c-an';
+    const keyFn=r=>{const o=dim('o',r[F.o]);
+      return o==='코일색전술'?'코일색전술':(o==='개두 클립결찰술'?'개두 클립결찰술':'조영술만 시행');};
+    const series=crossYear(anRows,keyFn,famOrder('an'),years).map(s=>({...s,color:colorOf('an',s.name)}));
+    stackedColumn(plotOf(id),years,series,{height:266,pctMode:cardMode(id)==='pct'});
+    legend(legOf(id),series);
+    const clip=anRows.filter(r=>dim('o',r[F.o])==='개두 클립결찰술').length;
+    $('#d-an').textContent=`총 ${fmt(anRows.length)}건 · clip 비율 ${pct(clip,anRows.length)}%`;
+    const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    tableView(tblOf(id),['구분',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...tot.map(fmt),fmt(anRows.length)]);
+  }
+
+  /* --- 5. 코일 세부기법 --- */
+  {
+    const id='c-coil',order=famOrder('coil');
+    const coilRows=anRows.filter(r=>r[F.k]>=0);
+    const kf=r=>{const k=dim('k',r[F.k]);return (k in COLORMAP.coil)?k:'기타';};
+    const series=crossYear(coilRows,kf,order,years).map(s=>({...s,color:colorOf('coil',s.name)}));
+    stackedColumn(plotOf(id),years,series,{height:266,pctMode:cardMode(id)==='pct',capLabel:false});
+    legend(legOf(id),series);
+    const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    tableView(tblOf(id),['기법',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...tot.map(fmt),fmt(coilRows.length)]);
+  }
+
+  /* --- 6. 동맥류 위치 --- */
+  {
+    const id='c-loc';
+    const all=countBy(anRows,r=>dim('l',r[F.l]));
+    const top=all.slice(0,15);
+    barH(plotOf(id),top,{labelW:126});
+    tableView(tblOf(id),['위치','건수','비율'],
+      all.map(d=>[d[0],fmt(d[1]),pct(d[1],anRows.length)+'%']),
+      ['합계',fmt(all.reduce((s,d)=>s+d[1],0)),'']);
+  }
+
+  /* --- 7. 파열 여부 --- */
+  {
+    const id='c-pres';
+    const kf=r=>{const d=dim('d',r[F.d]);return d==='SAH'?'파열 (SAH)':(d==='UIA'?'비파열 (UIA)':null);};
+    const order=famOrder('rupt');
+    const series=crossYear(anRows,kf,order,years).map(s=>({...s,color:colorOf('rupt',s.name)}));
+    stackedColumn(plotOf(id),years,series,{height:266,pctMode:cardMode(id)==='pct'});
+    legend(legOf(id),series);
+    const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    tableView(tblOf(id),['구분',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...tot.map(fmt),fmt(tot.reduce((a,b)=>a+b,0))]);
+  }
+
+  /* --- 8. 세부 술기 --- */
+  {
+    const id='c-proc';
+    const all=countBy(rows,r=>dim('o',r[F.o]));
+    barH(plotOf(id),all.slice(0,16),{labelW:150});
+    const coilAll=(all.find(d=>d[0]==='코일색전술')||[,0])[1];
+    const coilAn=anRows.filter(r=>dim('o',r[F.o])==='코일색전술').length;
+    $('#d-proc').textContent=coilAll>coilAn
+      ? `질환과 무관한 시행 술기 기준 · 코일색전술 ${fmt(coilAll)}건 중 ${fmt(coilAll-coilAn)}건은 DAVF·CCF·AVF 등 비동맥류`
+      : '질환과 무관한 시행 술기 기준 · 상위 16개';
+    tableView(tblOf(id),['술기','건수','비율'],
+      all.map(d=>[d[0],fmt(d[1]),pct(d[1],N)+'%']),
+      ['합계',fmt(all.reduce((s,d)=>s+d[1],0)),'']);
+  }
+
+  /* --- 9. 주치의별 --- */
+  {
+    const id='c-att',order=famOrder('att');
+    const series=crossYear(rows,attOf,order,years).map(s=>({...s,color:colorOf('att',s.name)}));
+    stackedColumn(plotOf(id),years,series,{height:266,pctMode:cardMode(id)==='pct',capLabel:false});
+    legend(legOf(id),series);
+    const tot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    tableView(tblOf(id),['주치의',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...tot.map(fmt),fmt(N)]);
+  }
+
+  /* --- 10. 합병증률 --- */
+  {
+    const id='c-cx';
+    const num=years.map(y=>rows.filter(r=>r[F.y]===y&&r[F.x]===1).length);
+    const den=years.map(y=>rows.filter(r=>r[F.y]===y&&r[F.x]>=0).length);
+    const rate=years.map((_,i)=>den[i]?Math.round(num[i]/den[i]*1000)/10:null);
+    lineChart(plotOf(id),years,[{name:'합병증률',color:V('--s8'),values:rate}],
+      {height:238,suffix:'%',rightPad:40});
+    $('#d-cx').textContent=`전체 ${pct(cxYes,cxKnown.length)}% (${fmt(cxYes)}/${fmt(cxKnown.length)}건)`;
+    tableView(tblOf(id),['연도','합병증','기록건수','비율'],
+      years.map((y,i)=>[y,fmt(num[i]),fmt(den[i]),rate[i]==null?'—':rate[i]+'%']),
+      ['합계',fmt(cxYes),fmt(cxKnown.length),pct(cxYes,cxKnown.length)+'%']);
+  }
+
+  /* --- 11. 연령대 --- */
+  {
+    const id='c-age';
+    const order=D.dims.b;
+    const counts=order.map(b=>rows.filter(r=>dim('b',r[F.b])===b).length);
+    const series=[{name:'건수',color:V('--s1'),values:counts}];
+    stackedColumn(plotOf(id),order,series,{height:238});
+    const male=rows.filter(r=>r[F.s]===0).length,fem=rows.filter(r=>r[F.s]===1).length;
+    $('#d-age').textContent=`남 ${fmt(male)} · 여 ${fmt(fem)} · 전체 평균 ${D.meta.age_mean}세`;
+    tableView(tblOf(id),['연령대','건수','비율'],
+      order.map((b,i)=>[b,fmt(counts[i]),pct(counts[i],N)+'%']),
+      ['합계',fmt(counts.reduce((a,b)=>a+b,0)),'']);
+  }
+
+  /* --- 12. 히트맵 --- */
+  {
+    const id='c-heat',order=famOrder('grp');
+    const series=crossYear(rows,grpOf,order,years);
+    const colTot=years.map((_,i)=>series.reduce((s,se)=>s+se.values[i],0));
+    heatmap(plotOf(id),series.map(s=>s.name),years.map(String),series.map(s=>s.values),colTot);
+    tableView(tblOf(id),['질환군',...years.map(String),'합계'],
+      series.map(s=>[s.name,...s.values.map(fmt),fmt(s.values.reduce((a,b)=>a+b,0))]),
+      ['합계',...colTot.map(fmt),fmt(N)]);
+  }
+}
+
+/* ============ 필터 UI ============ */
+function fillSelect(sel,opts,ph){
+  sel.textContent='';
+  const o0=document.createElement('option');o0.value='';o0.textContent=ph;sel.appendChild(o0);
+  opts.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+}
+function init(){
+  const yF=$('#yFrom'),yT=$('#yTo');
+  YEARS.forEach(y=>{
+    const a=document.createElement('option');a.value=y;a.textContent=y;yF.appendChild(a);
+    const b=document.createElement('option');b.value=y;b.textContent=y;yT.appendChild(b);
+  });
+  state.yFrom=YEARS[0];state.yTo=YEARS[YEARS.length-1];
+  yF.value=state.yFrom;yT.value=state.yTo;
+
+  fillSelect($('#fCat'),famOrder('cat').filter(c=>c!=='미분류'),'전체');
+  fillSelect($('#fGrp'),famOrder('grp'),'전체');
+  fillSelect($('#fTx'), famOrder('tx').filter(c=>c!=='미분류'),'전체');
+  fillSelect($('#fAtt'),famOrder('att'),'전체');
+
+  yF.addEventListener('change',()=>{state.yFrom=+yF.value;
+    if(state.yFrom>state.yTo){state.yTo=state.yFrom;yT.value=state.yTo;}render();});
+  yT.addEventListener('change',()=>{state.yTo=+yT.value;
+    if(state.yTo<state.yFrom){state.yFrom=state.yTo;yF.value=state.yFrom;}render();});
+  $('#fCat').addEventListener('change',e=>{state.cat=e.target.value;render();});
+  $('#fGrp').addEventListener('change',e=>{state.grp=e.target.value;render();});
+  $('#fTx').addEventListener('change', e=>{state.tx =e.target.value;render();});
+  $('#fAtt').addEventListener('change',e=>{state.att=e.target.value;render();});
+  $('#reset').addEventListener('click',()=>{
+    state.yFrom=YEARS[0];state.yTo=YEARS[YEARS.length-1];
+    state.cat=state.grp=state.tx=state.att='';
+    yF.value=state.yFrom;yT.value=state.yTo;
+    $('#fCat').value='';$('#fGrp').value='';$('#fTx').value='';$('#fAtt').value='';
+    render();
+  });
+
+  $('#period').textContent=`${D.meta.date_min} – ${D.meta.date_max} · 총 ${fmt(D.meta.total)}건`;
+  $('#meta').textContent=
+    `생성 ${D.meta.generated} · 원본 ${D.meta.source} (수정 ${D.meta.source_mtime}) · `+
+    `동맥류 집계기준: Dx=UIA/SAH & clip/coil/시도후 조영술만 = ${D.meta.aneurysm.total}건`;
+  const g=(D.meta.gaps||[]).map(x=>`${x.from} ~ ${x.to} (${x.label})`).join(', ');
+  $('#gapnote').textContent=g
+    ? `데이터 공백 안내 — ${g}. 해당 기간은 수술이 시행되지 않은 기간이므로 2024·2025년 건수는 다른 연도와 직접 비교하지 마십시오.`
+    : '';
+
+  const tb=$('#themeBtn');
+  const saved=localStorage.getItem('theme');
+  if(saved)document.documentElement.setAttribute('data-theme',saved);
+  tb.addEventListener('click',()=>{
+    const cur=document.documentElement.getAttribute('data-theme');
+    const isDark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+    const next=isDark?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);render();
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
+    if(!document.documentElement.getAttribute('data-theme'))render();
+  });
+
+  render();
+  let t;const redraw=()=>{clearTimeout(t);t=setTimeout(render,140);};
+  addEventListener('resize',redraw);
+  // 폰트/스크롤바 확정 후 폭이 바뀌면 다시 그림 (첫 페인트가 좁게 잡히는 경우 방지)
+  let lastW=document.querySelector('.wrap').clientWidth;
+  new ResizeObserver(()=>{
+    const w=document.querySelector('.wrap').clientWidth;
+    if(w!==lastW){lastW=w;redraw();}
+  }).observe(document.querySelector('.wrap'));
+}
+init();
+})();
+</script>
+</body>
+</html>
