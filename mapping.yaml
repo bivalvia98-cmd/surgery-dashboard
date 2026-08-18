@@ -43,7 +43,9 @@ operator:
 # ------------------------------------------------------------
 category:
   Vascular: 혈관
-  Vsacular: 혈관
+  Vsacular: 혈관      # 오타
+  Vaacular: 혈관      # 오타
+  vascular: 혈관
   Trauma: 외상
   Tumor: 종양
   Others: 기타
@@ -355,3 +357,14 @@ location:
   "M1 inferior trunk": M1
   "Persistent trigeminal artery": 기타
   unknown: 미상
+
+# ------------------------------------------------------------
+# 8. 최근 변경 내역 표시 (대시보드 상단 '마지막 갱신' 패널)
+#    show           : 추가된 케이스 목록을 표시할지
+#    max_items      : 한 번의 갱신에서 보여줄 최대 건수
+#    keep_updates   : 보관할 갱신 이력 개수
+# ------------------------------------------------------------
+recent_changes:
+  show: true
+  max_items: 30
+  keep_updates: 12

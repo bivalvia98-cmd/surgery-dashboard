@@ -71,8 +71,51 @@ button.ghost[aria-pressed="true"]{background:var(--ink-1);color:var(--surface-1)
   border:1px solid var(--hair);border-radius:7px;padding:6px 8px;min-width:110px;cursor:pointer}
 .filters select:focus-visible{outline:2px solid var(--s1);outline-offset:1px}
 .filters .yr{display:flex;align-items:center;gap:6px}
-.filters .yr select{min-width:82px}
+.filters .yr select{min-width:0;padding:6px 4px 6px 7px}
+.filters .yr select[id^="y"]{min-width:76px}
+.filters .yr select[id^="m"]{min-width:62px}
+.presets{display:flex;gap:5px}
+.presets button{font:inherit;font-size:12px;color:var(--ink-2);background:var(--surface-1);
+  border:1px solid var(--hair);border-radius:7px;padding:6px 9px;cursor:pointer;white-space:nowrap}
+.presets button:hover{color:var(--ink-1);border-color:var(--axis)}
+.presets button[aria-pressed="true"]{background:var(--ink-1);color:var(--surface-1);
+  border-color:var(--ink-1)}
 .filters .grow{flex:1}
+
+/* ---------- 마지막 갱신 패널 ---------- */
+.upd{background:var(--surface-1);border:1px solid var(--hair);border-radius:12px;
+  margin:16px 0 0;overflow:hidden}
+.upd summary{list-style:none;cursor:pointer;display:flex;align-items:center;
+  gap:9px;padding:11px 15px;font-size:13px;color:var(--ink-2)}
+.upd summary::-webkit-details-marker{display:none}
+.upd summary:hover{background:var(--plane)}
+.upd .dot{width:8px;height:8px;border-radius:50%;background:var(--neutral);flex:none}
+.upd .dot.fresh{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 22%,transparent)}
+.upd .lab{color:var(--ink-3);font-size:12px}
+.upd .when{color:var(--ink-1);font-weight:600;font-variant-numeric:tabular-nums}
+.upd .delta{font-size:12px;font-weight:640;color:var(--good);
+  background:color-mix(in srgb,var(--good) 12%,transparent);
+  border-radius:20px;padding:2px 9px}
+.upd .delta.none{color:var(--ink-3);background:transparent;font-weight:500}
+.upd .chev{margin-left:auto;font-size:12px;color:var(--ink-3)}
+.upd[open] .chev::after{content:" 접기"}
+.upd[open] .chev{font-size:0}
+.upd[open] .chev::after{font-size:12px}
+.updbody{padding:2px 15px 14px;border-top:1px solid var(--hair)}
+.updbody h3{font-size:12px;font-weight:600;color:var(--ink-3);margin:12px 0 6px}
+.updbody table{border-collapse:collapse;font-size:12px;width:100%}
+.updbody th,.updbody td{padding:5px 10px 5px 0;text-align:left;
+  border-bottom:1px solid var(--grid);white-space:nowrap}
+.updbody th{color:var(--ink-3);font-weight:550}
+.updbody td.dt{font-variant-numeric:tabular-nums;color:var(--ink-1);font-weight:600}
+.updbody .hist{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.updbody .empty{font-size:12px;color:var(--ink-3);padding:8px 0}
+@media(max-width:560px){
+  .upd summary{flex-wrap:wrap;gap:6px}
+  .upd .chev{margin-left:0;width:100%}
+  .updbody{overflow-x:auto}
+}
 .scoped{color:var(--ink-3);font-size:12px;padding-bottom:7px}
 
 /* ---------- KPI ---------- */
@@ -154,8 +197,20 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--hair);
 </header>
 
 <div class="filters" id="filters">
-  <div class="f"><label for="yFrom">기간</label>
-    <div class="yr"><select id="yFrom"></select><span style="color:var(--ink-3)">–</span><select id="yTo"></select></div>
+  <div class="f"><label for="dFrom">기간</label>
+    <div class="yr">
+      <select id="yFrom" aria-label="시작 연도"></select><select id="mFrom" aria-label="시작 월"></select>
+      <span style="color:var(--ink-3)">–</span>
+      <select id="yTo" aria-label="종료 연도"></select><select id="mTo" aria-label="종료 월"></select>
+    </div>
+  </div>
+  <div class="f"><label>빠른 선택</label>
+    <div class="presets" id="presets">
+      <button type="button" data-range="all">전체</button>
+      <button type="button" data-range="ytd">올해</button>
+      <button type="button" data-range="12m">최근 1년</button>
+      <button type="button" data-range="3m">최근 3개월</button>
+    </div>
   </div>
   <div class="f"><label for="fCat">대분류</label><select id="fCat"></select></div>
   <div class="f"><label for="fGrp">질환군</label><select id="fGrp"></select></div>
@@ -165,6 +220,17 @@ footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--hair);
   <div class="grow"></div>
   <div class="scoped" id="scoped"></div>
 </div>
+
+<details class="upd" id="upd">
+  <summary>
+    <span class="dot" id="updDot"></span>
+    <span class="lab">마지막 갱신</span>
+    <span class="when" id="updWhen">—</span>
+    <span class="delta" id="updDelta"></span>
+    <span class="chev">추가된 내용 보기</span>
+  </summary>
+  <div class="updbody" id="updBody"></div>
+</details>
 
 <div class="kpis" id="kpis"></div>
 
@@ -337,8 +403,15 @@ const colorOf=(fam,name)=>{const s=COLORMAP[fam]&&COLORMAP[fam][name];return V(s
 const famOrder = fam => Object.keys(COLORMAP[fam]);
 
 /* ============ 필터 ============ */
-const state={yFrom:null,yTo:null,cat:'',grp:'',tx:'',att:''};
+const state={from:null,to:null,cat:'',grp:'',tx:'',att:''};
 const YEARS=[...new Set(CASES.map(r=>r[F.y]))].sort((a,b)=>a-b);
+const pad=n=>String(n).padStart(2,'0');
+const dateOf=r=>`${r[F.y]}-${pad(r[F.m])}`;          // 연-월 (공개용, 일 단위 없음)
+const MIN=D.meta.date_min, MAX=D.meta.date_max;
+const shiftMonths=(ym,n)=>{const y=+ym.slice(0,4),m=+ym.slice(5,7)+n;
+  const yy=y+Math.floor((m-1)/12), mm=((m-1)%12+12)%12+1;
+  return `${yy}-${pad(mm)}`;};
+const kym=ym=>ym?`${ym.slice(0,4)}년 ${+ym.slice(5,7)}월`:'';
 const ATT_TOP=['C','NU','S','L','ENT'];
 
 function attOf(r){const a=dim('a',r[F.a]);return a&&ATT_TOP.includes(a)?a:'기타';}
@@ -346,7 +419,8 @@ function grpOf(r){const g=dim('g',r[F.g]);return (g in COLORMAP.grp)?g:'기타';
 
 function filtered(){
   return CASES.filter(r=>{
-    if(r[F.y]<state.yFrom||r[F.y]>state.yTo) return false;
+    const d=dateOf(r);
+    if(d<state.from||d>state.to) return false;
     if(state.cat && dim('c',r[F.c])!==state.cat) return false;
     if(state.grp && grpOf(r)!==state.grp) return false;
     if(state.tx  && dim('t',r[F.t])!==state.tx) return false;
@@ -692,7 +766,8 @@ const MONTHS=(()=>{const out=[];for(const y of YEARS)for(let m=1;m<=12;m++)out.p
 
 function render(){
   const rows=filtered();
-  const years=YEARS.filter(y=>y>=state.yFrom&&y<=state.yTo);
+  const y0=+state.from.slice(0,4), y1=+state.to.slice(0,4);
+  const years=YEARS.filter(y=>y>=y0&&y<=y1);
   const N=rows.length;
 
   /* --- KPI --- */
@@ -700,9 +775,10 @@ function render(){
   const evt=rows.filter(r=>dim('t',r[F.t])==='혈관내치료').length;
   const srg=rows.filter(r=>dim('t',r[F.t])==='개두수술').length;
   const cxKnown=rows.filter(r=>r[F.x]>=0), cxYes=cxKnown.filter(r=>r[F.x]===1).length;
-  const thisYear=Math.max(...years), lastY=rows.filter(r=>r[F.y]===thisYear).length;
+  const thisYear=years.length?Math.max(...years):+MAX.slice(0,4);
+  const lastY=rows.filter(r=>r[F.y]===thisYear).length;
   const kpi=[
-    ['총 수술 건수',fmt(N),`${state.yFrom}–${state.yTo}년`,true],
+    ['총 수술 건수',fmt(N),`${kym(state.from)} ~ ${kym(state.to)}`,true],
     [`${thisYear}년 건수`,fmt(lastY),D.meta.date_max+' 기준'],
     ['동맥류 치료',fmt(anRows.length),`clip ${fmt(anRows.filter(r=>dim('o',r[F.o])==='개두 클립결찰술').length)} · coil ${fmt(anRows.filter(r=>dim('o',r[F.o])==='코일색전술').length)}`],
     ['혈관내치료 비율',N?pct(evt,N)+'%':'—',`${fmt(evt)}건 / 개두 ${fmt(srg)}건`],
@@ -725,7 +801,8 @@ function render(){
     if(mode==='month'){
       const mk=new Map();
       rows.forEach(r=>{const k=r[F.y]*100+r[F.m];mk.set(k,(mk.get(k)||0)+1);});
-      const ms=MONTHS.filter(([y])=>y>=state.yFrom&&y<=state.yTo);
+      const ms=MONTHS.filter(([y,m])=>{
+        const k=`${y}-${pad(m)}`; return k>=state.from && k<=state.to;});
       const labels=ms.map(([y,m])=>m===1?`${y}`:(m===7?'7':''));
       const vals=ms.map(([y,m])=>mk.get(y*100+m)||0);
       lineChart(plotOf(id),labels,[{name:'월별 건수',color:V('--s1'),values:vals}],
@@ -898,6 +975,79 @@ function render(){
   }
 }
 
+/* ============ 마지막 갱신 패널 ============ */
+function agoText(iso){
+  const t0=new Date(iso.replace(' ','T')), diff=(Date.now()-t0)/1000;
+  if(diff<60) return '방금 전';
+  if(diff<3600) return `${Math.floor(diff/60)}분 전`;
+  if(diff<86400) return `${Math.floor(diff/3600)}시간 전`;
+  const d=Math.floor(diff/86400);
+  return d<30 ? `${d}일 전` : `${Math.floor(d/30)}개월 전`;
+}
+function renderUpdatePanel(){
+  const ups=D.meta.updates||[], last=ups[ups.length-1];
+  const when=D.meta.last_change||D.meta.generated;
+  const fresh=(Date.now()-new Date(when.replace(' ','T')))/86400000 < 3;
+  $('#updDot').className='dot'+(fresh?' fresh':'');
+  $('#updWhen').textContent=`${when} (${agoText(when)})`;
+
+  const dEl=$('#updDelta');
+  const n=last&&last.added;
+  if(n){ dEl.textContent=`+${n}건 추가`; dEl.className='delta'; }
+  else { dEl.textContent='건수 변동 없음'; dEl.className='delta none'; }
+
+  const body=$('#updBody'); body.textContent='';
+  if(last&&last.note){
+    const e=document.createElement('div');e.className='empty';
+    e.textContent='※ '+last.note;body.appendChild(e);
+  }
+  // 실제로 건이 추가된 가장 최근 갱신을 보여준다
+  const withCases=[...ups].reverse().find(u=>u.cases&&u.cases.length);
+  const items=(withCases&&withCases.cases)||[];
+  const h=document.createElement('h3');
+  h.textContent=items.length
+    ? (withCases===last ? `이번에 추가된 ${items.length}건`
+                        : `가장 최근 추가된 ${items.length}건 · ${withCases.at}`)
+    : '추가된 건';
+  body.appendChild(h);
+
+  if(!items.length){
+    const e=document.createElement('div');e.className='empty';
+    e.textContent='기록된 추가 내역이 없습니다.';
+    body.appendChild(e);
+  }else{
+    const tb=document.createElement('table');
+    const cols=['날짜','질환군','진단','위치','치료','술기'];
+    const th=document.createElement('thead'),tr=document.createElement('tr');
+    cols.forEach(c=>{const x=document.createElement('th');x.textContent=c;tr.appendChild(x);});
+    th.appendChild(tr);tb.appendChild(th);
+    const tbody=document.createElement('tbody');
+    items.slice().reverse().forEach(it=>{
+      const r=document.createElement('tr');
+      cols.forEach(c=>{
+        const td=document.createElement('td');
+        if(c==='날짜') td.className='dt';
+        td.textContent=it[c]==null?'—':it[c];
+        r.appendChild(td);
+      });
+      tbody.appendChild(r);
+    });
+    tb.appendChild(tbody);body.appendChild(tb);
+  }
+
+  if(ups.length>1){
+    const h2=document.createElement('h3');h2.textContent='이전 갱신 이력';body.appendChild(h2);
+    const w=document.createElement('div');w.className='hist';
+    ups.slice(0,-1).reverse().forEach(u=>{
+      const s=document.createElement('span');
+      s.textContent=`${u.at} · 총 ${fmt(u.total)}건`+(u.added?` (+${u.added})`:'')
+        +(u.removed?` (−${u.removed})`:'')+(u.note?' · 분류 수정':'');
+      w.appendChild(s);
+    });
+    body.appendChild(w);
+  }
+}
+
 /* ============ 필터 UI ============ */
 function fillSelect(sel,opts,ph){
   sel.textContent='';
@@ -905,35 +1055,62 @@ function fillSelect(sel,opts,ph){
   opts.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
 }
 function init(){
-  const yF=$('#yFrom'),yT=$('#yTo');
-  YEARS.forEach(y=>{
-    const a=document.createElement('option');a.value=y;a.textContent=y;yF.appendChild(a);
-    const b=document.createElement('option');b.value=y;b.textContent=y;yT.appendChild(b);
+  const yF=$('#yFrom'),mF=$('#mFrom'),yT=$('#yTo'),mT=$('#mTo');
+  YEARS.forEach(y=>[yF,yT].forEach(sel=>{
+    const o=document.createElement('option');o.value=y;o.textContent=y+'년';sel.appendChild(o);}));
+  for(let m=1;m<=12;m++)[mF,mT].forEach(sel=>{
+    const o=document.createElement('option');o.value=pad(m);o.textContent=m+'월';sel.appendChild(o);});
+  state.from=MIN;state.to=MAX;
+  const syncInputs=()=>{
+    yF.value=state.from.slice(0,4); mF.value=state.from.slice(5,7);
+    yT.value=state.to.slice(0,4);   mT.value=state.to.slice(5,7);
+  };
+  syncInputs();
+
+  function markPreset(){
+    document.querySelectorAll('#presets button').forEach(b=>
+      b.setAttribute('aria-pressed', b.dataset.range===state.preset?'true':'false'));
+  }
+  function applyRange(from,to,preset){
+    state.from=from<MIN?MIN:from;
+    state.to=to>MAX?MAX:to;
+    if(state.from>state.to) state.from=state.to;
+    state.preset=preset||'';
+    syncInputs();markPreset();render();
+  }
+  document.querySelectorAll('#presets button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const k=b.dataset.range, end=MAX;
+      if(k==='all')      applyRange(MIN,MAX,'all');
+      else if(k==='ytd') applyRange(end.slice(0,4)+'-01',end,'ytd');
+      else if(k==='12m') applyRange(shiftMonths(end,-11),end,'12m');
+      else if(k==='3m')  applyRange(shiftMonths(end,-2),end,'3m');
+    });
   });
-  state.yFrom=YEARS[0];state.yTo=YEARS[YEARS.length-1];
-  yF.value=state.yFrom;yT.value=state.yTo;
+  state.preset='all';markPreset();
 
   fillSelect($('#fCat'),famOrder('cat').filter(c=>c!=='미분류'),'전체');
   fillSelect($('#fGrp'),famOrder('grp'),'전체');
   fillSelect($('#fTx'), famOrder('tx').filter(c=>c!=='미분류'),'전체');
   fillSelect($('#fAtt'),famOrder('att'),'전체');
 
-  yF.addEventListener('change',()=>{state.yFrom=+yF.value;
-    if(state.yFrom>state.yTo){state.yTo=state.yFrom;yT.value=state.yTo;}render();});
-  yT.addEventListener('change',()=>{state.yTo=+yT.value;
-    if(state.yTo<state.yFrom){state.yFrom=state.yTo;yF.value=state.yFrom;}render();});
+  const onFrom=()=>{const v=`${yF.value}-${mF.value}`;
+    applyRange(v, v>state.to?v:state.to, '');};
+  const onTo=()=>{const v=`${yT.value}-${mT.value}`;
+    applyRange(v<state.from?v:state.from, v, '');};
+  yF.addEventListener('change',onFrom); mF.addEventListener('change',onFrom);
+  yT.addEventListener('change',onTo);   mT.addEventListener('change',onTo);
   $('#fCat').addEventListener('change',e=>{state.cat=e.target.value;render();});
   $('#fGrp').addEventListener('change',e=>{state.grp=e.target.value;render();});
   $('#fTx').addEventListener('change', e=>{state.tx =e.target.value;render();});
   $('#fAtt').addEventListener('change',e=>{state.att=e.target.value;render();});
   $('#reset').addEventListener('click',()=>{
-    state.yFrom=YEARS[0];state.yTo=YEARS[YEARS.length-1];
     state.cat=state.grp=state.tx=state.att='';
-    yF.value=state.yFrom;yT.value=state.yTo;
     $('#fCat').value='';$('#fGrp').value='';$('#fTx').value='';$('#fAtt').value='';
-    render();
+    applyRange(MIN,MAX,'all');
   });
 
+  renderUpdatePanel();
   $('#period').textContent=`${D.meta.date_min} – ${D.meta.date_max} · 총 ${fmt(D.meta.total)}건`;
   $('#meta').textContent=
     `생성 ${D.meta.generated} · 원본 ${D.meta.source} (수정 ${D.meta.source_mtime}) · `+

@@ -269,27 +269,89 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
+    rc = cfg.get("recent_changes") or {}
+    MAX_ITEMS = int(rc.get("max_items", 30))
+    KEEP_UPDATES = int(rc.get("keep_updates", 12))
+
     # 집계 내용이 그대로면 파일을 다시 쓰지 않는다.
-    # (생성시각·원본수정시각만 바뀌어 빈 커밋이 쌓이는 것을 막기 위함)
+    # (생성시각·변경이력만 바뀌어 빈 커밋이 쌓이는 것을 막기 위함)
+    VOLATILE = ("generated", "source_mtime", "last_change", "updates")
+
     def substantive(obj):
-        m = {k: v for k, v in obj["meta"].items() if k not in ("generated", "source_mtime")}
+        m = {k: v for k, v in obj["meta"].items() if k not in VOLATILE}
         return {"meta": m, "fields": obj["fields"], "dims": obj["dims"], "cases": obj["cases"]}
 
-    unchanged = False
+    def readable(obj):
+        """압축된 케이스를 사람이 읽는 dict 로 복원 (빌드 간 대조용)"""
+        f, dm = obj["fields"], obj["dims"]
+        out = []
+        for row in obj["cases"]:
+            rec = {}
+            for i, name in enumerate(f):
+                v = row[i]
+                rec[name] = None if v == -1 else (dm[name][v] if name in dm else v)
+            out.append(rec)
+        return out
+
+    old = None
     if OUT.exists():
         try:
             old = json.loads(OUT.read_text(encoding="utf-8"))
-            unchanged = substantive(old) == substantive(data)
-        except (json.JSONDecodeError, KeyError):
-            unchanged = False
+        except json.JSONDecodeError:
+            old = None
+    # 이전 결과가 같은 스키마이면 증감 대조 가능 (이력 유무와 무관)
+    comparable = bool(old) and old.get("fields") == data["fields"]
+    unchanged = comparable and substantive(old) == substantive(data)
 
     if unchanged:
+        data["meta"]["last_change"] = old["meta"]["last_change"]
+        data["meta"]["updates"] = old["meta"]["updates"]
         print("[ok] 집계 결과 동일 — 파일 갱신 생략")
     else:
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+        added, removed = [], 0
+        if comparable:
+            key = lambda r: tuple(str(r[k]) for k in data["fields"])
+            new_recs, old_recs = readable(data), readable(old)
+            oldc, seen = Counter(map(key, old_recs)), Counter()
+            for r in new_recs:
+                k = key(r)
+                seen[k] += 1
+                if seen[k] > oldc[k]:
+                    added.append(r)
+            removed = sum((oldc - Counter(map(key, new_recs))).values())
+
+        def brief(r):
+            # 공개 페이지이므로 날짜는 연·월까지만 (일 단위는 식별 위험)
+            return {"날짜": f"{r['y']}-{r['m']:02d}", "질환군": r["g"], "진단": r["d"],
+                    "위치": r["l"], "치료": r["t"], "술기": r["o"]}
+
+        entry = {
+            "at": now,
+            "total": len(cases),
+            "added": len(added) if comparable else None,
+            "removed": removed,
+            "aneurysm": an_total,
+            "cases": [brief(r) for r in added[-MAX_ITEMS:]] if rc.get("show", True) else [],
+        }
+        data["meta"]["last_change"] = now
+        prev_hist = (old["meta"].get("updates") or []) if old else []
+        data["meta"]["updates"] = (prev_hist + [entry])[-KEEP_UPDATES:]
+
         payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
         OUT.write_text(payload, encoding="utf-8")
         # file:// 로 열어도 동작하도록 JS 형태로도 함께 출력 (index.html 이 이걸 읽습니다)
         (OUT.parent / "data.js").write_text("window.SURGERY_DATA=" + payload + ";", encoding="utf-8")
+
+        if comparable:
+            print(f"[변경] 추가 {len(added)}건" + (f", 삭제 {removed}건" if removed else ""))
+            for r in added[-10:]:
+                b = brief(r)
+                print(f"       + {b['날짜']}  {b['진단']}"
+                      + (f" / {b['위치']}" if b["위치"] else "")
+                      + f"  {b['술기'] or '-'}")
+        else:
+            print("[변경] 기준선 생성 — 다음 빌드부터 증감 내역을 기록합니다")
 
     # ---------------- 리포트 ----------------
     print(f"[ok] {OUT.relative_to(ROOT)} {'확인' if unchanged else '생성'} — "
