@@ -326,12 +326,23 @@ def main() -> int:
             return {"날짜": f"{r['y']}-{r['m']:02d}", "질환군": r["g"], "진단": r["d"],
                     "위치": r["l"], "치료": r["t"], "술기": r["o"]}
 
+        # 질환군별 스냅샷과 증감 (총 건수만으로는 무엇이 늘었는지 알 수 없으므로)
+        groups = dict(Counter(c["g"] for c in cases))
+        old_groups = (dict(Counter(r["g"] for r in readable(old)))
+                      if comparable else {})
+        by_group = [{"name": g, "from": old_groups.get(g, 0), "to": groups.get(g, 0)}
+                    for g in sorted(set(groups) | set(old_groups),
+                                    key=lambda x: -groups.get(x, 0))
+                    if comparable and old_groups.get(g, 0) != groups.get(g, 0)]
+
         entry = {
             "at": now,
             "total": len(cases),
             "added": len(added) if comparable else None,
             "removed": removed,
             "aneurysm": an_total,
+            "groups": groups,
+            "by_group": by_group,
             "cases": [brief(r) for r in added[-MAX_ITEMS:]] if rc.get("show", True) else [],
         }
         data["meta"]["last_change"] = now
@@ -345,6 +356,9 @@ def main() -> int:
 
         if comparable:
             print(f"[변경] 추가 {len(added)}건" + (f", 삭제 {removed}건" if removed else ""))
+            for g in by_group:
+                print(f"       [질환군] {g['name']}: {g['from']} → {g['to']} "
+                      f"({g['to'] - g['from']:+d})")
             for r in added[-10:]:
                 b = brief(r)
                 print(f"       + {b['날짜']}  {b['진단']}"
