@@ -7,7 +7,8 @@
 # ============================================================
 
 # 원본 엑셀 파일 경로 (절대경로)
-source_file: "/Users/jaihochoi/Library/Mobile Documents/com~apple~CloudDocs/최재호수술통계/수술통계(최) 2017~_DB보충_20260810.xlsx"
+# 2026-10-12: 최종판을 "수술통계(최) 2017~.xlsx" 로 전환 (사용자 확정)
+source_file: "/Users/jaihochoi/Library/Mobile Documents/com~apple~CloudDocs/최재호수술통계/수술통계(최) 2017~.xlsx"
 source_sheet: "최재호 수술"
 
 # 실제로 수술이 없었던 기간 (대시보드에 회색 음영 + 주석 표시)
@@ -283,7 +284,8 @@ coil_technique_numeric:
 coil_technique_text:
   PAO: 모혈관 폐색술
   "4,2": SAC (스텐트 보조)
-  WEB: WEB
+  WEB: WEB·Artisse
+  Artisse: WEB·Artisse
   HR: Single catheter
   "2 - cath. Assist": Double catheter
   A1 internal trapping: 모혈관 폐색술
@@ -295,7 +297,8 @@ coil_technique_text:
 # 위 표에서 정확히 일치하는 값이 없을 때, 아래 문자열이 포함되어 있으면 매칭
 # (예: 'WEB 11th case' 처럼 케이스 번호가 붙어도 자동으로 WEB 으로 분류)
 coil_technique_contains:
-  web: WEB
+  web: WEB·Artisse
+  artisse: WEB·Artisse
   trapping: 모혈관 폐색술
   flow diverter: Flow diverter
   fred: Flow diverter
@@ -312,7 +315,7 @@ coil_technique_order:
   - Stent only
   - Flow diverter
   - 모혈관 폐색술
-  - WEB
+  - WEB·Artisse
   - 기타
 
 # ------------------------------------------------------------
@@ -349,6 +352,7 @@ location:
   "P1/2": PCA
   A2: A2
   parclinoid: Paraclinoid
+  parclionoid: Paraclinoid
   OA: Paraclinoid
   cavernous: Cavernous ICA
   "Cavernous ICA": Cavernous ICA
